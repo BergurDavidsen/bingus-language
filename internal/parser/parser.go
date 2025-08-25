@@ -1,13 +1,31 @@
-package main
+package parser
 
 import (
 	"fmt"
 	"reflect"
+
+	"github.com/BergurDavidsen/bingus/internal/lexer"
 )
 
 type Parser struct {
-	tokens []Token
+	Tokens []lexer.Token
 	pos    int
+}
+
+var precedences = map[string]int{
+	"+":  1,
+	"-":  1,
+	"*":  2,
+	"/":  2,
+	"u+": 3,
+	"u-": 3,
+}
+
+func getPrecedence(tok lexer.Token) int {
+	if prec, ok := precedences[tok.Literal]; ok {
+		return prec
+	}
+	return 0
 }
 
 func printNodeReflect(node interface{}, indent string) {
@@ -54,11 +72,11 @@ func printNodeReflect(node interface{}, indent string) {
 	}
 }
 
-func (p *Parser) currentToken() Token {
-	if p.pos >= len(p.tokens) {
-		return Token{Type: -1, Literal: ""}
+func (p *Parser) currentToken() lexer.Token {
+	if p.pos >= len(p.Tokens) {
+		return lexer.Token{Type: -1, Literal: ""}
 	}
-	return p.tokens[p.pos]
+	return p.Tokens[p.pos]
 }
 
 func (p *Parser) advance() {
@@ -68,7 +86,7 @@ func (p *Parser) advance() {
 func (p *Parser) parseNumber() *NumberLiteral {
 	tok := p.currentToken()
 
-	if tok.Type != TOKEN_NUMBER {
+	if tok.Type != lexer.TOKEN_NUMBER {
 		panic(fmt.Sprintf("Expected number, got: %v", tok))
 	}
 
@@ -79,7 +97,7 @@ func (p *Parser) parseNumber() *NumberLiteral {
 func (p *Parser) parseIdent() *IDent {
 	tok := p.currentToken()
 
-	if tok.Type != TOKEN_IDENT {
+	if tok.Type != lexer.TOKEN_IDENT {
 		panic("Expected identifier after let")
 	}
 	p.advance()
@@ -88,14 +106,14 @@ func (p *Parser) parseIdent() *IDent {
 }
 func (p *Parser) parseReturnStmt() *ReturnStmt {
 	tok := p.currentToken()
-	if tok.Type != TOKEN_RETURN {
+	if tok.Type != lexer.TOKEN_RETURN {
 		panic(fmt.Sprintf("Expected 'return', got: %v", tok))
 	}
 	p.advance()
 
-	value := p.parserExpression()
+	value := p.parserExpression(1)
 
-	if p.currentToken().Type != TOKEN_SEMICOLON {
+	if p.currentToken().Type != lexer.TOKEN_SEMICOLON {
 		panic(fmt.Sprintf("Expected ';', got: %v", p.currentToken()))
 	}
 	p.advance()
@@ -106,27 +124,27 @@ func (p *Parser) parseReturnStmt() *ReturnStmt {
 func (p *Parser) parseLetStmt() *LetStmt {
 	tok := p.currentToken()
 
-	if tok.Type != TOKEN_LET {
+	if tok.Type != lexer.TOKEN_LET {
 		panic(fmt.Sprintf("Expected 'let', got: %v", tok))
 	}
 
 	p.advance() // ignore let
 
-	if p.currentToken().Type != TOKEN_IDENT {
+	if p.currentToken().Type != lexer.TOKEN_IDENT {
 		panic("Expected identifier after let")
 	}
 
 	id := p.parseIdent()
 
-	if p.currentToken().Type != TOKEN_EQUAL {
+	if p.currentToken().Type != lexer.TOKEN_EQUAL {
 		panic("Expected '=' after identifier in let statement")
 	}
 
 	p.advance()
 
-	value := p.parserExpression()
+	value := p.parserExpression(1)
 
-	if p.currentToken().Type != TOKEN_SEMICOLON {
+	if p.currentToken().Type != lexer.TOKEN_SEMICOLON {
 		panic(fmt.Sprintf("Expected ';', got: %v", tok))
 	}
 	p.advance()
@@ -134,19 +152,22 @@ func (p *Parser) parseLetStmt() *LetStmt {
 	return &LetStmt{Name: id, Value: value}
 }
 
-func (p *Parser) parserExpression() Node {
+func (p *Parser) parserExpression(minPrec int) Node {
 
 	left := p.parsePrimary()
 
-	for p.pos < len(p.tokens) {
+	for p.pos < len(p.Tokens) {
 		tok := p.currentToken()
-		if tok.Literal != "+" && tok.Literal != "-" {
+		prec := getPrecedence(tok)
+
+		if prec < minPrec {
 			break
 		}
+
 		op := tok.Literal
 		p.advance()
 
-		right := p.parsePrimary()
+		right := p.parserExpression(prec + 1)
 
 		left = &BinaryExpr{
 			Left:     left,
@@ -162,29 +183,46 @@ func (p *Parser) parsePrimary() Node {
 	tok := p.currentToken()
 
 	switch tok.Type {
-	case TOKEN_NUMBER:
+	case lexer.TOKEN_NUMBER:
 		return p.parseNumber()
-	case TOKEN_IDENT:
+	case lexer.TOKEN_IDENT:
 		return p.parseIdent()
+	case lexer.TOKEN_LPAREN:
+		p.advance()
+		expr := p.parserExpression(1)
+		if p.currentToken().Type != lexer.TOKEN_RPAREN {
+			panic(fmt.Sprintf("Expected ')', got: %v", p.currentToken()))
+		}
+		p.advance()
+		return expr
+	case lexer.TOKEN_PLUS, lexer.TOKEN_MINUS:
+		op := tok.Literal
+		p.advance()
+		right := p.parsePrimary()
+		return &UnaryExpr{
+			Operator: op,
+			Right:    right,
+		}
+
 	default:
 		panic(fmt.Sprintf("Expected number after return, got: %v", p.currentToken()))
 	}
 }
 
-func (p *Parser) parseProgram() *Program {
+func (p *Parser) ParseProgram() *Program {
 	prog := &Program{}
 
-	for p.pos < len(p.tokens) {
+	for p.pos < len(p.Tokens) {
 		tok := p.currentToken()
 		switch tok.Type {
-		case TOKEN_RETURN:
+		case lexer.TOKEN_RETURN:
 			stmt := p.parseReturnStmt()
 			prog.Statements = append(prog.Statements, stmt)
-		case TOKEN_LET:
+		case lexer.TOKEN_LET:
 			stmt := p.parseLetStmt()
 			prog.Statements = append(prog.Statements, stmt)
 		default:
-			panic(fmt.Sprintf("Unexpected token: %v", tok))
+			panic(fmt.Sprintf("Unexpected lexer.token: %v", tok))
 		}
 	}
 	return prog

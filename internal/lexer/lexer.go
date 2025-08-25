@@ -1,11 +1,11 @@
-package main
+package lexer
 
 import (
 	"fmt"
 	"unicode"
 )
 
-func lex(input string) []Token {
+func Lex(input string) []Token {
 	var tokens []Token
 
 	i := 0

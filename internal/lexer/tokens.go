@@ -1,4 +1,4 @@
-package main
+package lexer
 
 const (
 	TOKEN_IF = iota
@@ -19,6 +19,8 @@ const (
 	TOKEN_SEMICOLON // ;
 	TOKEN_PLUS
 	TOKEN_MINUS
+	TOKEN_MULTIPLY
+	TOKEN_DIVIDE
 )
 
 var keywords = map[string]int{
@@ -34,6 +36,8 @@ var keywords = map[string]int{
 var singleCharTokens = map[byte]int{
 	'+': TOKEN_PLUS,
 	'-': TOKEN_MINUS,
+	'*': TOKEN_MULTIPLY,
+	'/': TOKEN_DIVIDE,
 	'=': TOKEN_EQUAL,
 	';': TOKEN_SEMICOLON,
 	'(': TOKEN_LPAREN,

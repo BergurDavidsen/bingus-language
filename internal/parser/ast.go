@@ -1,4 +1,4 @@
-package main
+package parser
 
 type Node interface{}
 
@@ -25,6 +25,11 @@ type LetStmt struct {
 
 type BinaryExpr struct {
 	Left     Node
+	Operator string
+	Right    Node
+}
+
+type UnaryExpr struct {
 	Operator string
 	Right    Node
 }

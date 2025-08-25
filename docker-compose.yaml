@@ -1,0 +1,9 @@
+version: "3.8"
+
+services:
+  bingus-dev:
+    build: .
+    platform: linux/amd64
+    volumes:
+      - .:/app
+    tty: true
