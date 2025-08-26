@@ -2,9 +2,37 @@
 
 Bingus is a tiny compiled language with simple syntax. This project is my playground for learning compilers — parsing code, building ASTs, and generating machine code. Just a fun way to explore how programming languages work under the hood.
 
-## Update (Mon, 25/8-2025)
+## Updates
+
+### Update (Mon, 25/8-2025)
 
 It can now compile a simple return statement with a return code into assembly and then machine code. It runs on a docker image for a linux x86 distro, generates the given code in a `.bng` file into assembly x86. Then it uses `nasm` to create the object file and finally it uses the linker command `ld` to create the machine code.
+
+### Update (Tue, 26/8-2025)
+
+It can now store and retrieve variables, aswell as do arithmetic operations with numbers and variables🥳. You define a variable using the syntax `let <variable> = <value>`. It currently only supports integers and number literals. The variable can be any string.
+
+To do arithmetic, you chose to do addition (`+`), subtraction (`-`), multiplication (`*`), and integer division (`/`).
+Examples for valid programs would be:
+
+```bash
+# Defining variables
+let x = 8;
+let y = 2;
+
+# Arithmetic operations using variables
+let add = x+y;
+let sub = x-y;
+let mul = x*y;
+let div = x/y;
+
+# Returning variables
+return add+sub+mul+div;
+```
+
+The return statement will evaluate the result to be `36` and will set that as the exit code. You can verify this by compiling the code, running the compiled code and then by checking the exit code of the compiled program with `echo $?`.
+
+This syntax is temporary and will most likely be changed to something else, but I have still not really decided exactly what I want it to be.
 
 ## Check it out
 

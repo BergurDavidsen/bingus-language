@@ -121,7 +121,7 @@ func (cg *CodeGen) genExprWithTarget(node parser.Node, target string) string {
 			cg.EmitIndent(1, fmt.Sprintf("sub rbx, %s", target))
 			cg.EmitIndent(1, fmt.Sprintf("mov %s, rbx", target))
 		case "*":
-			cg.EmitIndent(1, fmt.Sprintf("mul %s, rbx", target))
+			cg.EmitIndent(1, "mul rbx")
 		}
 		return target
 
