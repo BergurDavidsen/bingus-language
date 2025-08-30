@@ -44,10 +44,55 @@ func (cg *CodeGen) Gen(node parser.Node) {
 
 	switch n := node.(type) {
 	case *parser.Program:
+		lastStmt := n.Statements[len(n.Statements)-1]
+
+		if _, ok := lastStmt.(*parser.ReturnStmt); !ok {
+			fmt.Println("Warning: no return statement at end of program; adding a default 'return 0' to end of file.")
+			n.Statements = append(n.Statements, &parser.ReturnStmt{
+				Value: &parser.NumberLiteral{Value: "0"},
+			})
+		}
 		for _, stmt := range n.Statements {
 			cg.GenStmt(stmt)
 		}
 	}
+
+	asmHelper := `
+		section .bss
+		buffer resb 20
+
+		section .text
+		print_number:
+			mov rax, rdi
+			mov rcx, 0
+			lea rbx, [buffer+19]
+			mov byte [rbx], 10
+			dec rbx
+
+		.convert_loop:
+			xor rdx, rdx
+			mov rsi, 10
+			div rsi
+			add dl, '0'
+			mov [rbx], dl
+			dec rbx
+			inc rcx
+			test rax, rax
+			jnz .convert_loop
+
+			inc rbx
+
+			mov rax, 1
+			mov rdi, 1
+			mov rsi, rbx
+			inc rcx
+			mov rdx, rcx
+			syscall
+
+			ret
+		`
+
+	cg.Emit(asmHelper)
 
 }
 
@@ -66,6 +111,10 @@ func (cg *CodeGen) GenStmt(node parser.Node) {
 		cg.symbols[n.Name.Name] = offset
 
 		cg.EmitIndent(1, fmt.Sprintf("mov QWORD [rbp-%d], %s", offset, val))
+	case *parser.PrintStmt:
+		val := cg.GenExpr(n.Value)
+		cg.EmitIndent(1, fmt.Sprintf("mov rdi, %s", val))
+		cg.EmitIndent(1, "call print_number")
 
 	default:
 		panic(fmt.Sprintf("unsupported statement: %T", n))

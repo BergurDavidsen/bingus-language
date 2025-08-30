@@ -121,6 +121,24 @@ func (p *Parser) parseReturnStmt() *ReturnStmt {
 	return &ReturnStmt{Value: value}
 }
 
+func (p *Parser) parsePrint() *PrintStmt {
+	tok := p.currentToken()
+
+	if tok.Type != lexer.TOKEN_PRINT {
+		panic(fmt.Sprintf("Expected 'print', got: %v", tok))
+	}
+	p.advance()
+
+	value := p.parserExpression(1)
+
+	if p.currentToken().Type != lexer.TOKEN_SEMICOLON {
+		panic(fmt.Sprintf("Expected ';', got: %v", p.currentToken()))
+	}
+	p.advance()
+
+	return &PrintStmt{Value: value}
+}
+
 func (p *Parser) parseLetStmt() *LetStmt {
 	tok := p.currentToken()
 
@@ -220,6 +238,9 @@ func (p *Parser) ParseProgram() *Program {
 			prog.Statements = append(prog.Statements, stmt)
 		case lexer.TOKEN_LET:
 			stmt := p.parseLetStmt()
+			prog.Statements = append(prog.Statements, stmt)
+		case lexer.TOKEN_PRINT:
+			stmt := p.parsePrint()
 			prog.Statements = append(prog.Statements, stmt)
 		default:
 			panic(fmt.Sprintf("Unexpected lexer.token: %v", tok))

@@ -18,6 +18,10 @@ type IDent struct {
 	Name string
 }
 
+type PrintStmt struct {
+	Value Node
+}
+
 type LetStmt struct {
 	Name  *IDent
 	Value Node

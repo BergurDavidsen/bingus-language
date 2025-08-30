@@ -34,6 +34,25 @@ The return statement will evaluate the result to be `36` and will set that as th
 
 This syntax is temporary and will most likely be changed to something else, but I have still not really decided exactly what I want it to be.
 
+### Update (Saturday, 30/8-2025)
+
+The language now has print features. It can now print numbers literals and variables to the terminal using the syntax `print <number or variable>`. This makes it way more usable as you now do not need to check the return code to see the result of the written code, because you can now just print directly to the terminal.
+
+Some example code, building on the last example, that compiles and works is:
+
+```bash
+let x = 8;
+let y = 2;
+let add = x+y;
+let sub = x-y;
+let mul = x*y;
+let div = x/y;
+let all = add+sub+mul+div;
+print all;
+```
+
+It also now checks if there is a return statement at the end of the file, and if there is not, then it prints a warning at compile time and adds a default `return 0` to the generated `assembly` code. This is was to make the syntax a bit simpler and also to avoid segmentation fault when a user does not add a return statement to the code file.
+
 ## Check it out
 
 To compile a `.bng` file, can follow these steps:
