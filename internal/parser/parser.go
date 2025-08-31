@@ -13,12 +13,17 @@ type Parser struct {
 }
 
 var precedences = map[string]int{
-	"+":  1,
-	"-":  1,
-	"*":  2,
-	"/":  2,
-	"u+": 3,
-	"u-": 3,
+	"==": 1, // lowest precedence
+	"<":  1,
+	"<=": 1,
+	">":  1,
+	">=": 1,
+	"+":  2,
+	"-":  2,
+	"*":  3,
+	"/":  3,
+	"u+": 4,
+	"u-": 4,
 }
 
 func getPrecedence(tok lexer.Token) int {
@@ -28,7 +33,7 @@ func getPrecedence(tok lexer.Token) int {
 	return 0
 }
 
-func printNodeReflect(node interface{}, indent string) {
+func PrintNodeReflect(node interface{}, indent string) {
 	if node == nil {
 		fmt.Println(indent + "nil")
 		return
@@ -42,7 +47,7 @@ func printNodeReflect(node interface{}, indent string) {
 			fmt.Println(indent + "nil")
 			return
 		}
-		printNodeReflect(v.Elem().Interface(), indent)
+		PrintNodeReflect(v.Elem().Interface(), indent)
 		return
 	}
 
@@ -56,7 +61,7 @@ func printNodeReflect(node interface{}, indent string) {
 			kind := reflect.ValueOf(val).Kind()
 			if kind == reflect.Struct || kind == reflect.Ptr || kind == reflect.Slice {
 				fmt.Println()
-				printNodeReflect(val, indent+"    ")
+				PrintNodeReflect(val, indent+"    ")
 			} else {
 				fmt.Printf("%v\n", val)
 			}
@@ -64,7 +69,7 @@ func printNodeReflect(node interface{}, indent string) {
 
 	case reflect.Slice:
 		for i := 0; i < v.Len(); i++ {
-			printNodeReflect(v.Index(i).Interface(), indent+"  ")
+			PrintNodeReflect(v.Index(i).Interface(), indent+"  ")
 		}
 
 	default:
@@ -185,7 +190,7 @@ func (p *Parser) parserExpression(minPrec int) Node {
 		op := tok.Literal
 		p.advance()
 
-		right := p.parserExpression(prec + 1)
+		right := p.parserExpression(prec)
 
 		left = &BinaryExpr{
 			Left:     left,
@@ -221,7 +226,10 @@ func (p *Parser) parsePrimary() Node {
 			Operator: op,
 			Right:    right,
 		}
-
+	case lexer.TOKEN_TRUE, lexer.TOKEN_FALSE:
+		val := tok.Type == lexer.TOKEN_TRUE
+		p.advance()
+		return &BoolLit{Value: val}
 	default:
 		panic(fmt.Sprintf("Expected number after return, got: %v", p.currentToken()))
 	}

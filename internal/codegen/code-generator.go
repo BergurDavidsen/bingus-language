@@ -101,7 +101,12 @@ func (cg *CodeGen) GenStmt(node parser.Node) {
 	case *parser.ReturnStmt:
 		val := cg.GenExpr(n.Value)
 		cg.EmitIndent(1, fmt.Sprintf("mov rdi, %s", val)) // exit code
-		cg.EmitIndent(1, "mov rax, 60")                   // syscall: exit
+
+		// Tear down stack frame before exit
+		cg.EmitIndent(1, "mov rsp, rbp")
+		cg.EmitIndent(1, "pop rbp")
+
+		cg.EmitIndent(1, "mov rax, 60") // syscall: exit
 		cg.EmitIndent(1, "syscall")
 	case *parser.LetStmt:
 		val := cg.GenExpr(n.Value)
@@ -110,7 +115,9 @@ func (cg *CodeGen) GenStmt(node parser.Node) {
 		offset := cg.stackPos
 		cg.symbols[n.Name.Name] = offset
 
+		cg.EmitIndent(1, "sub rsp, 8")
 		cg.EmitIndent(1, fmt.Sprintf("mov QWORD [rbp-%d], %s", offset, val))
+
 	case *parser.PrintStmt:
 		val := cg.GenExpr(n.Value)
 		cg.EmitIndent(1, fmt.Sprintf("mov rdi, %s", val))
@@ -137,6 +144,13 @@ func (cg *CodeGen) genExprWithTarget(node parser.Node, target string) string {
 
 		cg.EmitIndent(1, fmt.Sprintf("mov %s, [rbp-%d]", target, offset))
 		return target
+	case *parser.BoolLit:
+		val := 0
+		if n.Value {
+			val = 1
+		}
+		cg.EmitIndent(1, fmt.Sprintf("mov %s, %d", target, val))
+		return target
 
 	case *parser.UnaryExpr:
 		cg.GenExpr(n.Right)
@@ -149,6 +163,7 @@ func (cg *CodeGen) genExprWithTarget(node parser.Node, target string) string {
 	case *parser.BinaryExpr:
 
 		op := n.Operator
+
 		if op == "/" {
 			cg.GenExpr(n.Left)
 			cg.EmitIndent(1, "xor rdx, rdx")
@@ -157,21 +172,52 @@ func (cg *CodeGen) genExprWithTarget(node parser.Node, target string) string {
 			return target
 
 		}
-		cg.GenExpr(n.Left)
 
-		cg.EmitIndent(1, fmt.Sprintf("push %s", target))
-		cg.GenExpr(n.Right)
-		cg.EmitIndent(1, "pop rbx")
+		cg.genExprWithTarget(n.Left, "rax")
+
+		// Allocate temporary stack slot for LHS
+		cg.stackPos += 8
+		lhsOffset := cg.stackPos
+		cg.EmitIndent(1, fmt.Sprintf("mov QWORD [rbp-%d], rax", lhsOffset))
+
+		// Generate right-hand side into rax
+		cg.genExprWithTarget(n.Right, "rax")
+
+		// Load LHS back into rbx
+		cg.EmitIndent(1, fmt.Sprintf("mov rbx, [rbp-%d]", lhsOffset))
 
 		switch op {
 		case "+":
-			cg.EmitIndent(1, fmt.Sprintf("add %s, rbx", target))
+			cg.EmitIndent(1, "add rax, rbx")
 		case "-":
-			cg.EmitIndent(1, fmt.Sprintf("sub rbx, %s", target))
-			cg.EmitIndent(1, fmt.Sprintf("mov %s, rbx", target))
+			cg.EmitIndent(1, "sub rbx, rax")
+			cg.EmitIndent(1, "mov rax, rbx")
 		case "*":
-			cg.EmitIndent(1, "mul rbx")
+			cg.EmitIndent(1, "imul rax, rbx")
+		case "<":
+			cg.EmitIndent(1, "cmp rbx, rax")
+			cg.EmitIndent(1, "setl al")
+			cg.EmitIndent(1, "movzx rax, al")
+		case ">":
+			cg.EmitIndent(1, "cmp rbx, rax")
+			cg.EmitIndent(1, "setg al")
+			cg.EmitIndent(1, "movzx rax, al")
+		case "==":
+			cg.EmitIndent(1, "cmp rbx, rax")
+			cg.EmitIndent(1, "sete al")
+			cg.EmitIndent(1, "movzx rax, al")
+		case "<=":
+			cg.EmitIndent(1, "cmp rbx, rax")
+			cg.EmitIndent(1, "setle al")
+			cg.EmitIndent(1, "movzx rax, al")
+		case ">=":
+			cg.EmitIndent(1, "cmp rbx, rax")
+			cg.EmitIndent(1, "setge al")
+			cg.EmitIndent(1, "movzx rax, al")
 		}
+
+		cg.stackPos -= 8
+
 		return target
 
 	default:

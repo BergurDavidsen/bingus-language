@@ -40,6 +40,18 @@ The language now has print features. It can now print numbers literals and varia
 
 Some example code, building on the last example, that compiles and works is:
 
+### Update (Sunday, 31/8-2025)
+
+The language now has boolean literals and can do boolean comparisons that result in boolean literals. An example that compiles is:
+
+```bash
+let x = 3 <= 6;
+print x;
+return 0;
+```
+
+It supports `==`, `<=`, `>=`, `<` and `>` as comparators and also `true` and `false` as boolean constants. If the literal is `true` it will result in the integer value `1` and `0` otherwise.
+
 ```bash
 let x = 8;
 let y = 2;
@@ -52,6 +64,8 @@ print all;
 ```
 
 It also now checks if there is a return statement at the end of the file, and if there is not, then it prints a warning at compile time and adds a default `return 0` to the generated `assembly` code. This is was to make the syntax a bit simpler and also to avoid segmentation fault when a user does not add a return statement to the code file.
+
+Now it also has slightly better stack space management by allocating the appropriate space when storing variables on the stack, and as well as now not pushing and popping of the stack for every binary operation. Instead it simply writes the right side and left side to each of their respective registers.
 
 ## Check it out
 

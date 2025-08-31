@@ -18,6 +18,14 @@ func Lex(input string) []Token {
 			i++
 			continue
 		}
+		if i+1 < len(input) {
+			twoChar := input[i : i+2]
+			if tokType, ok := multiCharTokens[twoChar]; ok {
+				tokens = append(tokens, Token{Type: tokType, Literal: twoChar})
+				i += 2
+				continue
+			}
+		}
 
 		if tokType, ok := singleCharTokens[c]; ok {
 			tokens = append(tokens, Token{Type: tokType, Literal: string(c)})

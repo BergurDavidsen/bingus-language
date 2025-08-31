@@ -10,7 +10,7 @@
 *.app
 bin/*
 output/*
-bingus
+
 
 # Test binary, built with `go test -c`
 *.test

@@ -21,6 +21,13 @@ const (
 	TOKEN_MINUS
 	TOKEN_MULTIPLY
 	TOKEN_DIVIDE
+	TOKEN_TRUE
+	TOKEN_FALSE
+	TOKEN_LT
+	TOKEN_GT
+	TOKEN_LE
+	TOKEN_GE
+	TOKEN_EQ
 )
 
 var keywords = map[string]int{
@@ -29,8 +36,16 @@ var keywords = map[string]int{
 	"while":  TOKEN_WHILE,
 	"for":    TOKEN_FOR,
 	"let":    TOKEN_LET,
+	"true":   TOKEN_TRUE,
+	"false":  TOKEN_FALSE,
 	"print":  TOKEN_PRINT,
 	"return": TOKEN_RETURN,
+}
+
+var multiCharTokens = map[string]int{
+	"==": TOKEN_EQ,
+	"<=": TOKEN_LE,
+	">=": TOKEN_GE,
 }
 
 var singleCharTokens = map[byte]int{
@@ -42,6 +57,8 @@ var singleCharTokens = map[byte]int{
 	';': TOKEN_SEMICOLON,
 	'(': TOKEN_LPAREN,
 	')': TOKEN_RPAREN,
+	'<': TOKEN_LT,
+	'>': TOKEN_GT,
 }
 
 type Token struct {

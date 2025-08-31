@@ -27,6 +27,10 @@ type LetStmt struct {
 	Value Node
 }
 
+type BoolLit struct {
+	Value bool
+}
+
 type BinaryExpr struct {
 	Left     Node
 	Operator string
