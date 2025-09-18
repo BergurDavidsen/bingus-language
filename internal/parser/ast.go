@@ -31,6 +31,12 @@ type BoolLit struct {
 	Value bool
 }
 
+type IfStmt struct {
+	Guard Node
+	Then  []Node
+	Else  []Node
+}
+
 type BinaryExpr struct {
 	Left     Node
 	Operator string

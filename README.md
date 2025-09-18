@@ -67,6 +67,22 @@ It also now checks if there is a return statement at the end of the file, and if
 
 Now it also has slightly better stack space management by allocating the appropriate space when storing variables on the stack, and as well as now not pushing and popping of the stack for every binary operation. Instead it simply writes the right side and left side to each of their respective registers.
 
+### Update (Thursday 18/9-2025)
+
+The language now officially supports if-else statements. The syntax looks like so:
+
+```c
+if (3>5) {
+    print 3;
+}
+else {
+    print 4;
+}
+return 0;
+```
+
+As you can see, it takes a condition of type boolean, represented as either `0` if `false` and `1` if `true`, and then depending on if the condition is true or false, it runs the correct conditional block. In the example above, the condition is false, therefore it evaluates to be `0` and then the code in the else block runs. If the condition was `(3<5)`, then the first block would run. This is a big step for the language to actually begin to be useful and somewhat practical.
+
 ## Check it out
 
 To compile a `.bng` file, can follow these steps:

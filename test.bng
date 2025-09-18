@@ -1,20 +1,7 @@
-let x = 8;
-let y = 2;
-let add = x+y;
-let sub = x-y;
-let mul = x*y;
-let div = x/y;
-let all = add+sub+mul+div;
-print add;
-print sub;
-print mul;
-print div;
-print all;
-print x > y;
-print div < mul;
-print x == x;
-print x == y;
-print false;
-print true;
-print 1+2*3;  
+if(3>5){
+    print 3;
+}
+else{
+    print 4;
+}
 return 0;

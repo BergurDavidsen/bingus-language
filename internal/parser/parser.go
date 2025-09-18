@@ -174,6 +174,67 @@ func (p *Parser) parseLetStmt() *LetStmt {
 
 	return &LetStmt{Name: id, Value: value}
 }
+func (p *Parser) parseBlock() []Node {
+	stmts := []Node{}
+
+	if p.currentToken().Type != lexer.TOKEN_LBRACE {
+		panic("Expected '{' at start of block")
+	}
+	p.advance() // consume '{'
+
+	for p.currentToken().Type != lexer.TOKEN_RBRACE {
+		tok := p.currentToken()
+		switch tok.Type {
+		case lexer.TOKEN_RETURN:
+			stmts = append(stmts, p.parseReturnStmt())
+		case lexer.TOKEN_LET:
+			stmts = append(stmts, p.parseLetStmt())
+		case lexer.TOKEN_PRINT:
+			stmts = append(stmts, p.parsePrint())
+		case lexer.TOKEN_IF:
+			stmts = append(stmts, p.parseIfStmt())
+		default:
+			panic(fmt.Sprintf("Unexpected token in block: %v", tok))
+		}
+	}
+
+	p.advance() // consume '}'
+	return stmts
+}
+
+func (p *Parser) parseIfStmt() *IfStmt {
+	tok := p.currentToken()
+
+	if tok.Type != lexer.TOKEN_IF {
+		panic(fmt.Sprintf("Expected 'if', got: %v", tok))
+	}
+
+	p.advance()
+
+	if p.currentToken().Type != lexer.TOKEN_LPAREN {
+		panic("Expected '(' after if statement")
+	}
+
+	p.advance()
+
+	gaurd := p.parserExpression(1)
+
+	if p.currentToken().Type != lexer.TOKEN_RPAREN {
+		panic("Expected ')' after if statement")
+	}
+	p.advance()
+
+	thenBlock := p.parseBlock()
+
+	if p.currentToken().Type != lexer.TOKEN_ELSE {
+		panic("Expected 'else' after if statement")
+	}
+	p.advance()
+
+	elseBlock := p.parseBlock()
+
+	return &IfStmt{Guard: gaurd, Then: thenBlock, Else: elseBlock}
+}
 
 func (p *Parser) parserExpression(minPrec int) Node {
 
@@ -249,6 +310,9 @@ func (p *Parser) ParseProgram() *Program {
 			prog.Statements = append(prog.Statements, stmt)
 		case lexer.TOKEN_PRINT:
 			stmt := p.parsePrint()
+			prog.Statements = append(prog.Statements, stmt)
+		case lexer.TOKEN_IF:
+			stmt := p.parseIfStmt()
 			prog.Statements = append(prog.Statements, stmt)
 		default:
 			panic(fmt.Sprintf("Unexpected lexer.token: %v", tok))

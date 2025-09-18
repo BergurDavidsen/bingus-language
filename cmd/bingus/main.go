@@ -56,15 +56,15 @@ func main() {
 	// fmt.Println("")
 
 	tokens := lexer.Lex(string(data))
-	fmt.Println("Tokens:")
+	// fmt.Println("Tokens:")
 
-	for _, tok := range tokens {
-		fmt.Printf("%#v\n", tok)
-	}
+	// for _, tok := range tokens {
+	// 	fmt.Printf("%#v\n", tok)
+	// }
 
 	p := parser.Parser{Tokens: tokens}
 	program := p.ParseProgram()
-	parser.PrintNodeReflect(program, "")
+	// parser.PrintNodeReflect(program, "")
 
 	// env := NewEnv()
 	// result := env.Eval(program)

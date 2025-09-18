@@ -11,6 +11,12 @@ type CodeGen struct {
 	code     []string
 	symbols  map[string]int
 	stackPos int
+	labelCnt int
+}
+
+func (cg *CodeGen) newLabel(base string) string {
+	cg.labelCnt++
+	return fmt.Sprintf(".%s_%d", base, cg.labelCnt)
 }
 
 func NewCodeGen() *CodeGen {
@@ -122,6 +128,27 @@ func (cg *CodeGen) GenStmt(node parser.Node) {
 		val := cg.GenExpr(n.Value)
 		cg.EmitIndent(1, fmt.Sprintf("mov rdi, %s", val))
 		cg.EmitIndent(1, "call print_number")
+
+	case *parser.IfStmt:
+		cg.GenExpr(n.Guard)
+
+		elseLabel := cg.newLabel("else")
+		endLabel := cg.newLabel("endif")
+
+		cg.EmitIndent(1, "cmp rax, 0")
+		cg.EmitIndent(1, fmt.Sprintf("je %s", elseLabel))
+
+		for _, stmt := range n.Then {
+			cg.GenStmt(stmt)
+		}
+		cg.EmitIndent(1, fmt.Sprintf("jmp %s", endLabel))
+
+		cg.Emit(fmt.Sprintf("%s:", elseLabel))
+		for _, stmt := range n.Else {
+			cg.GenStmt(stmt)
+		}
+
+		cg.Emit(fmt.Sprintf("%s:", endLabel))
 
 	default:
 		panic(fmt.Sprintf("unsupported statement: %T", n))
