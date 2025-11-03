@@ -13,7 +13,8 @@ type Parser struct {
 }
 
 var precedences = map[string]int{
-	"==": 1, // lowest precedence
+	"=":  0, // lowest precedence
+	"==": 1,
 	"<":  1,
 	"<=": 1,
 	">":  1,
@@ -81,7 +82,15 @@ func (p *Parser) currentToken() lexer.Token {
 	if p.pos >= len(p.Tokens) {
 		return lexer.Token{Type: -1, Literal: ""}
 	}
+
 	return p.Tokens[p.pos]
+}
+
+func (p *Parser) peek() lexer.Token {
+	if p.pos+1 >= len(p.Tokens) {
+		return lexer.Token{Type: -1, Literal: ""}
+	}
+	return p.Tokens[p.pos+1]
 }
 
 func (p *Parser) advance() {
@@ -109,6 +118,30 @@ func (p *Parser) parseIdent() *IDent {
 
 	return &IDent{Name: tok.Literal}
 }
+
+func (p *Parser) parseAssignmentStmt() *AssignmentStmt {
+	// Parse the left-hand side identifier
+	id := p.parseIdent()
+
+	if p.currentToken().Type != lexer.TOKEN_EQUAL {
+		panic("Expected '=' in assignment")
+	}
+	p.advance() // consume '='
+
+	// Parse the right-hand side expression
+	value := p.parserExpression(1)
+
+	if p.currentToken().Type != lexer.TOKEN_SEMICOLON {
+		panic("Expected ';' after assignment")
+	}
+	p.advance() // consume ';'
+
+	return &AssignmentStmt{
+		Name:  id,
+		Value: value,
+	}
+}
+
 func (p *Parser) parseReturnStmt() *ReturnStmt {
 	tok := p.currentToken()
 	if tok.Type != lexer.TOKEN_RETURN {
@@ -198,15 +231,7 @@ func (p *Parser) parseWhileStmt() *WhileStmt {
 
 	p.advance()
 
-	if p.currentToken().Type != lexer.TOKEN_LBRACE {
-		panic(fmt.Sprintf("Expected '{', got: %v", tok))
-	}
-
 	body := p.parseBlock()
-
-	if p.currentToken().Type != lexer.TOKEN_RBRACE {
-		panic(fmt.Sprintf("Expected '}', got: %v", tok))
-	}
 
 	return &WhileStmt{Guard: guard, Body: body}
 }
@@ -229,6 +254,8 @@ func (p *Parser) parseBlock() []Node {
 			stmts = append(stmts, p.parsePrint())
 		case lexer.TOKEN_IF:
 			stmts = append(stmts, p.parseIfStmt())
+		case lexer.TOKEN_IDENT:
+			stmts = append(stmts, p.parseAssignmentStmt())
 		default:
 			panic(fmt.Sprintf("Unexpected token in block: %v", tok))
 		}
@@ -287,7 +314,7 @@ func (p *Parser) parserExpression(minPrec int) Node {
 		op := tok.Literal
 		p.advance()
 
-		right := p.parserExpression(prec)
+		right := p.parserExpression(prec + 1)
 
 		left = &BinaryExpr{
 			Left:     left,
@@ -349,6 +376,12 @@ func (p *Parser) ParseProgram() *Program {
 			prog.Statements = append(prog.Statements, stmt)
 		case lexer.TOKEN_IF:
 			stmt := p.parseIfStmt()
+			prog.Statements = append(prog.Statements, stmt)
+		case lexer.TOKEN_WHILE:
+			stmt := p.parseWhileStmt()
+			prog.Statements = append(prog.Statements, stmt)
+		case lexer.TOKEN_IDENT:
+			stmt := p.parseAssignmentStmt()
 			prog.Statements = append(prog.Statements, stmt)
 		default:
 			panic(fmt.Sprintf("Unexpected lexer.token: %v", tok))

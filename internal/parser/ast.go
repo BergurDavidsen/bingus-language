@@ -18,6 +18,11 @@ type IDent struct {
 	Name string
 }
 
+type AssignmentStmt struct {
+	Name  *IDent
+	Value Node
+}
+
 type PrintStmt struct {
 	Value Node
 }

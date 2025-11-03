@@ -8,10 +8,11 @@ import (
 )
 
 type CodeGen struct {
-	code     []string
-	symbols  map[string]int
-	stackPos int
-	labelCnt int
+	code      []string
+	scope     []map[string]int
+	stackMark []int
+	stackPos  int
+	labelCnt  int
 }
 
 func (cg *CodeGen) newLabel(base string) string {
@@ -21,10 +22,57 @@ func (cg *CodeGen) newLabel(base string) string {
 
 func NewCodeGen() *CodeGen {
 	return &CodeGen{
-		code:     []string{},
-		symbols:  make(map[string]int),
-		stackPos: 0,
+		code:      []string{},
+		scope:     []map[string]int{{}},
+		stackMark: []int{},
+		stackPos:  0,
+		labelCnt:  0,
 	}
+}
+
+func (cg *CodeGen) pushScope() {
+	cg.scope = append(cg.scope, map[string]int{})
+	cg.stackMark = append(cg.stackMark, cg.stackPos)
+}
+
+func (cg *CodeGen) popScope() {
+	if len(cg.scope) == 0 {
+		panic("no scope to pop")
+	}
+
+	prevMark := cg.stackMark[len(cg.stackMark)-1] // saved at push
+	// compute how much space was allocated while in this scope
+	delta := cg.stackPos - prevMark
+	if delta > 0 {
+		cg.EmitIndent(1, fmt.Sprintf("add rsp, %d", delta))
+	}
+
+	cg.scope = cg.scope[:len(cg.scope)-1]
+	cg.stackMark = cg.stackMark[:len(cg.stackMark)-1]
+	cg.stackPos = prevMark
+}
+
+func (cg *CodeGen) currentScope() map[string]int {
+	return cg.scope[len(cg.scope)-1]
+}
+
+func (cg *CodeGen) declareVar(name string, offset int) {
+	scope := cg.currentScope()
+
+	if _, exists := scope[name]; exists {
+		panic(fmt.Sprintf("variable already declared in this scope: %s", name))
+	}
+
+	scope[name] = offset
+}
+
+func (cg *CodeGen) lookupVar(name string) (int, bool) {
+	for i := len(cg.scope) - 1; i >= 0; i-- {
+		if offset, ok := cg.scope[i][name]; ok {
+			return offset, true
+		}
+	}
+	return 0, false
 }
 
 func (cg *CodeGen) Emit(line string) {
@@ -118,10 +166,10 @@ func (cg *CodeGen) GenStmt(node parser.Node) {
 		val := cg.GenExpr(n.Value)
 
 		cg.stackPos += 8
-		offset := cg.stackPos
-		cg.symbols[n.Name.Name] = offset
-
 		cg.EmitIndent(1, "sub rsp, 8")
+		offset := cg.stackPos
+		cg.declareVar(n.Name.Name, offset)
+
 		cg.EmitIndent(1, fmt.Sprintf("mov QWORD [rbp-%d], %s", offset, val))
 
 	case *parser.PrintStmt:
@@ -133,23 +181,60 @@ func (cg *CodeGen) GenStmt(node parser.Node) {
 		cg.GenExpr(n.Guard)
 
 		elseLabel := cg.newLabel("else")
-		endLabel := cg.newLabel("endif")
+		end_label := cg.newLabel("endif")
 
 		cg.EmitIndent(1, "cmp rax, 0")
 		cg.EmitIndent(1, fmt.Sprintf("je %s", elseLabel))
 
+		cg.pushScope()
 		for _, stmt := range n.Then {
 			cg.GenStmt(stmt)
 		}
-		cg.EmitIndent(1, fmt.Sprintf("jmp %s", endLabel))
+		cg.popScope()
+
+		cg.EmitIndent(1, fmt.Sprintf("jmp %s", end_label))
 
 		cg.Emit(fmt.Sprintf("%s:", elseLabel))
+
+		cg.pushScope()
 		for _, stmt := range n.Else {
 			cg.GenStmt(stmt)
 		}
+		cg.popScope()
 
-		cg.Emit(fmt.Sprintf("%s:", endLabel))
+		cg.Emit(fmt.Sprintf("%s:", end_label))
+	case *parser.WhileStmt:
+		start_label := cg.newLabel("while_start")
+		end_label := cg.newLabel("while_end")
 
+		cg.Emit(fmt.Sprintf("%s:", start_label))
+
+		cg.GenExpr(n.Guard)
+
+		cg.EmitIndent(1, "cmp rax, 0")
+		cg.EmitIndent(1, fmt.Sprintf("je %s", end_label))
+
+		cg.pushScope()
+
+		for _, stmt := range n.Body {
+			cg.GenStmt(stmt)
+		}
+
+		cg.popScope()
+
+		cg.EmitIndent(1, fmt.Sprintf("jmp %s", start_label))
+
+		cg.Emit(fmt.Sprintf("%s:", end_label))
+
+	case *parser.AssignmentStmt:
+		val := cg.GenExpr(n.Value)
+
+		offset, ok := cg.lookupVar(n.Name.Name)
+		if !ok {
+			panic(fmt.Sprintf("undefined variable: %s", n.Name.Name))
+		}
+
+		cg.EmitIndent(1, fmt.Sprintf("mov [rbp-%d], %s", offset, val))
 	default:
 		panic(fmt.Sprintf("unsupported statement: %T", n))
 	}
@@ -164,7 +249,7 @@ func (cg *CodeGen) genExprWithTarget(node parser.Node, target string) string {
 		cg.EmitIndent(1, fmt.Sprintf("mov %s, %s", target, n.Value))
 		return n.Value
 	case *parser.IDent:
-		offset, ok := cg.symbols[n.Name]
+		offset, ok := cg.lookupVar(n.Name)
 		if !ok {
 			panic(fmt.Sprintf("undefined variable: %s", n.Name))
 		}
@@ -203,6 +288,7 @@ func (cg *CodeGen) genExprWithTarget(node parser.Node, target string) string {
 		cg.genExprWithTarget(n.Left, "rax")
 
 		// Allocate temporary stack slot for LHS
+		cg.EmitIndent(1, "sub rsp, 8")
 		cg.stackPos += 8
 		lhsOffset := cg.stackPos
 		cg.EmitIndent(1, fmt.Sprintf("mov QWORD [rbp-%d], rax", lhsOffset))
@@ -243,10 +329,10 @@ func (cg *CodeGen) genExprWithTarget(node parser.Node, target string) string {
 			cg.EmitIndent(1, "movzx rax, al")
 		}
 
+		cg.EmitIndent(1, "add rsp, 8")
 		cg.stackPos -= 8
 
 		return target
-
 	default:
 		panic(fmt.Sprintf("unsupported expression: %T", n))
 	}
