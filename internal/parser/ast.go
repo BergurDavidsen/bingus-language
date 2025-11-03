@@ -27,6 +27,11 @@ type LetStmt struct {
 	Value Node
 }
 
+type WhileStmt struct {
+	Guard Node
+	Body  []Node
+}
+
 type BoolLit struct {
 	Value bool
 }

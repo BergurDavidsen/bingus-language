@@ -174,6 +174,42 @@ func (p *Parser) parseLetStmt() *LetStmt {
 
 	return &LetStmt{Name: id, Value: value}
 }
+
+func (p *Parser) parseWhileStmt() *WhileStmt {
+	tok := p.currentToken()
+
+	if tok.Type != lexer.TOKEN_WHILE {
+		panic(fmt.Sprintf("Expected 'while', got: %v", tok))
+	}
+
+	p.advance()
+
+	if p.currentToken().Type != lexer.TOKEN_LPAREN {
+		panic(fmt.Sprintf("Expected '(', got: %v", tok))
+	}
+
+	p.advance()
+
+	guard := p.parserExpression(1)
+
+	if p.currentToken().Type != lexer.TOKEN_RPAREN {
+		panic(fmt.Sprintf("Expected ')', got: %v", tok))
+	}
+
+	p.advance()
+
+	if p.currentToken().Type != lexer.TOKEN_LBRACE {
+		panic(fmt.Sprintf("Expected '{', got: %v", tok))
+	}
+
+	body := p.parseBlock()
+
+	if p.currentToken().Type != lexer.TOKEN_RBRACE {
+		panic(fmt.Sprintf("Expected '}', got: %v", tok))
+	}
+
+	return &WhileStmt{Guard: guard, Body: body}
+}
 func (p *Parser) parseBlock() []Node {
 	stmts := []Node{}
 
