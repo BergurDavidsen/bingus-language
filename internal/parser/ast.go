@@ -57,3 +57,7 @@ type UnaryExpr struct {
 	Operator string
 	Right    Node
 }
+
+type BreakStmt struct{}
+
+type ContinueStmt struct{}

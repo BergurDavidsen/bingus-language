@@ -1,6 +1,12 @@
-let x = 100;
-while(x>0){
+let x = 0;
+while(x<100){
+    x = x+1;
     print x;
-    x = x-1;
+    if(x==4){
+        print 1000;
+        break;
+    } else{
+        continue;
+    }
 }
 return x;

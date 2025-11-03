@@ -4,6 +4,8 @@ const (
 	TOKEN_IF = iota
 	TOKEN_ELSE
 	TOKEN_WHILE
+	TOKEN_BREAK
+	TOKEN_CONTINUE
 	TOKEN_FOR
 	TOKEN_RETURN
 	TOKEN_LET
@@ -31,15 +33,17 @@ const (
 )
 
 var keywords = map[string]int{
-	"if":     TOKEN_IF,
-	"else":   TOKEN_ELSE,
-	"while":  TOKEN_WHILE,
-	"for":    TOKEN_FOR,
-	"let":    TOKEN_LET,
-	"true":   TOKEN_TRUE,
-	"false":  TOKEN_FALSE,
-	"print":  TOKEN_PRINT,
-	"return": TOKEN_RETURN,
+	"if":       TOKEN_IF,
+	"else":     TOKEN_ELSE,
+	"while":    TOKEN_WHILE,
+	"break":    TOKEN_BREAK,
+	"continue": TOKEN_CONTINUE,
+	"for":      TOKEN_FOR,
+	"let":      TOKEN_LET,
+	"true":     TOKEN_TRUE,
+	"false":    TOKEN_FALSE,
+	"print":    TOKEN_PRINT,
+	"return":   TOKEN_RETURN,
 }
 
 var multiCharTokens = map[string]int{

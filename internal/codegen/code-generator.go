@@ -8,11 +8,13 @@ import (
 )
 
 type CodeGen struct {
-	code      []string
-	scope     []map[string]int
-	stackMark []int
-	stackPos  int
-	labelCnt  int
+	code           []string
+	scope          []map[string]int
+	stackMark      []int
+	stackPos       int
+	labelCnt       int
+	loopStartStack []string
+	loopEndStack   []string
 }
 
 func (cg *CodeGen) newLabel(base string) string {
@@ -207,6 +209,9 @@ func (cg *CodeGen) GenStmt(node parser.Node) {
 		start_label := cg.newLabel("while_start")
 		end_label := cg.newLabel("while_end")
 
+		cg.loopStartStack = append(cg.loopStartStack, start_label)
+		cg.loopEndStack = append(cg.loopEndStack, end_label)
+
 		cg.Emit(fmt.Sprintf("%s:", start_label))
 
 		cg.GenExpr(n.Guard)
@@ -222,6 +227,9 @@ func (cg *CodeGen) GenStmt(node parser.Node) {
 
 		cg.popScope()
 
+		cg.loopStartStack = cg.loopStartStack[:len(cg.loopStartStack)-1]
+		cg.loopEndStack = cg.loopEndStack[:len(cg.loopEndStack)-1]
+
 		cg.EmitIndent(1, fmt.Sprintf("jmp %s", start_label))
 
 		cg.Emit(fmt.Sprintf("%s:", end_label))
@@ -235,6 +243,19 @@ func (cg *CodeGen) GenStmt(node parser.Node) {
 		}
 
 		cg.EmitIndent(1, fmt.Sprintf("mov [rbp-%d], %s", offset, val))
+
+	case *parser.BreakStmt:
+		if len(cg.loopEndStack) == 0 {
+			panic("break statement not inside loop")
+		}
+		cg.EmitIndent(1, fmt.Sprintf("jmp %s", cg.loopEndStack[len(cg.loopEndStack)-1]))
+
+	case *parser.ContinueStmt:
+		if len(cg.loopStartStack) == 0 {
+			panic("continue statement not inside loop")
+		}
+		cg.EmitIndent(1, fmt.Sprintf("jmp %s", cg.loopStartStack[len(cg.loopStartStack)-1]))
+
 	default:
 		panic(fmt.Sprintf("unsupported statement: %T", n))
 	}

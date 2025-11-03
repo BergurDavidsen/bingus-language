@@ -235,6 +235,39 @@ func (p *Parser) parseWhileStmt() *WhileStmt {
 
 	return &WhileStmt{Guard: guard, Body: body}
 }
+
+func (p *Parser) parseBreakStmt() *BreakStmt {
+	tok := p.currentToken()
+
+	if tok.Type != lexer.TOKEN_BREAK {
+		panic(fmt.Sprintf("Expected 'break', got: %v", tok))
+	}
+	p.advance()
+
+	if p.currentToken().Type != lexer.TOKEN_SEMICOLON {
+		panic(fmt.Sprintf("Expected ';', got: %v", tok))
+	}
+	p.advance()
+
+	return &BreakStmt{}
+}
+
+func (p *Parser) parseContinueStmt() *ContinueStmt {
+	tok := p.currentToken()
+
+	if tok.Type != lexer.TOKEN_CONTINUE {
+		panic(fmt.Sprintf("Expected 'continue', got: %v", tok))
+	}
+	p.advance()
+
+	if p.currentToken().Type != lexer.TOKEN_SEMICOLON {
+		panic(fmt.Sprintf("Expected ';', got: %v", tok))
+	}
+	p.advance()
+
+	return &ContinueStmt{}
+}
+
 func (p *Parser) parseBlock() []Node {
 	stmts := []Node{}
 
@@ -256,6 +289,10 @@ func (p *Parser) parseBlock() []Node {
 			stmts = append(stmts, p.parseIfStmt())
 		case lexer.TOKEN_IDENT:
 			stmts = append(stmts, p.parseAssignmentStmt())
+		case lexer.TOKEN_BREAK:
+			stmts = append(stmts, p.parseBreakStmt())
+		case lexer.TOKEN_CONTINUE:
+			stmts = append(stmts, p.parseContinueStmt())
 		default:
 			panic(fmt.Sprintf("Unexpected token in block: %v", tok))
 		}
@@ -379,6 +416,12 @@ func (p *Parser) ParseProgram() *Program {
 			prog.Statements = append(prog.Statements, stmt)
 		case lexer.TOKEN_WHILE:
 			stmt := p.parseWhileStmt()
+			prog.Statements = append(prog.Statements, stmt)
+		case lexer.TOKEN_BREAK:
+			stmt := p.parseBreakStmt()
+			prog.Statements = append(prog.Statements, stmt)
+		case lexer.TOKEN_CONTINUE:
+			stmt := p.parseContinueStmt()
 			prog.Statements = append(prog.Statements, stmt)
 		case lexer.TOKEN_IDENT:
 			stmt := p.parseAssignmentStmt()
