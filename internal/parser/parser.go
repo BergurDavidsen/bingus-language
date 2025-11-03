@@ -23,6 +23,7 @@ var precedences = map[string]int{
 	"-":  2,
 	"*":  3,
 	"/":  3,
+	"%":  3,
 	"u+": 4,
 	"u-": 4,
 }
@@ -303,21 +304,17 @@ func (p *Parser) parseBlock() []Node {
 }
 
 func (p *Parser) parseIfStmt() *IfStmt {
-	tok := p.currentToken()
-
-	if tok.Type != lexer.TOKEN_IF {
-		panic(fmt.Sprintf("Expected 'if', got: %v", tok))
+	if p.currentToken().Type != lexer.TOKEN_IF {
+		panic(fmt.Sprintf("Expected 'if', got: %v", p.currentToken()))
 	}
-
 	p.advance()
 
 	if p.currentToken().Type != lexer.TOKEN_LPAREN {
 		panic("Expected '(' after if statement")
 	}
-
 	p.advance()
 
-	gaurd := p.parserExpression(1)
+	guard := p.parserExpression(1)
 
 	if p.currentToken().Type != lexer.TOKEN_RPAREN {
 		panic("Expected ')' after if statement")
@@ -326,14 +323,17 @@ func (p *Parser) parseIfStmt() *IfStmt {
 
 	thenBlock := p.parseBlock()
 
-	if p.currentToken().Type != lexer.TOKEN_ELSE {
-		panic("Expected 'else' after if statement")
+	var elseBlock []Node
+	if p.currentToken().Type == lexer.TOKEN_ELSE {
+		p.advance()
+		elseBlock = p.parseBlock()
 	}
-	p.advance()
 
-	elseBlock := p.parseBlock()
-
-	return &IfStmt{Guard: gaurd, Then: thenBlock, Else: elseBlock}
+	return &IfStmt{
+		Guard: guard,
+		Then:  thenBlock,
+		Else:  elseBlock,
+	}
 }
 
 func (p *Parser) parserExpression(minPrec int) Node {

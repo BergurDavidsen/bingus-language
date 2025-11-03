@@ -182,29 +182,44 @@ func (cg *CodeGen) GenStmt(node parser.Node) {
 	case *parser.IfStmt:
 		cg.GenExpr(n.Guard)
 
-		elseLabel := cg.newLabel("else")
-		end_label := cg.newLabel("endif")
+		endLabel := cg.newLabel("endif")
 
-		cg.EmitIndent(1, "cmp rax, 0")
-		cg.EmitIndent(1, fmt.Sprintf("je %s", elseLabel))
+		if len(n.Else) > 0 {
+			elseLabel := cg.newLabel("else")
+			cg.EmitIndent(1, "cmp rax, 0")
+			cg.EmitIndent(1, fmt.Sprintf("je %s", elseLabel))
 
-		cg.pushScope()
-		for _, stmt := range n.Then {
-			cg.GenStmt(stmt)
+			// THEN block
+			cg.pushScope()
+			for _, stmt := range n.Then {
+				cg.GenStmt(stmt)
+			}
+			cg.popScope()
+
+			cg.EmitIndent(1, fmt.Sprintf("jmp %s", endLabel))
+
+			// ELSE block
+			cg.Emit(fmt.Sprintf("%s:", elseLabel))
+			cg.pushScope()
+			for _, stmt := range n.Else {
+				cg.GenStmt(stmt)
+			}
+			cg.popScope()
+		} else {
+			// No ELSE block
+			cg.EmitIndent(1, "cmp rax, 0")
+			cg.EmitIndent(1, fmt.Sprintf("je %s", endLabel))
+
+			// THEN block
+			cg.pushScope()
+			for _, stmt := range n.Then {
+				cg.GenStmt(stmt)
+			}
+			cg.popScope()
 		}
-		cg.popScope()
 
-		cg.EmitIndent(1, fmt.Sprintf("jmp %s", end_label))
+		cg.Emit(fmt.Sprintf("%s:", endLabel))
 
-		cg.Emit(fmt.Sprintf("%s:", elseLabel))
-
-		cg.pushScope()
-		for _, stmt := range n.Else {
-			cg.GenStmt(stmt)
-		}
-		cg.popScope()
-
-		cg.Emit(fmt.Sprintf("%s:", end_label))
 	case *parser.WhileStmt:
 		start_label := cg.newLabel("while_start")
 		end_label := cg.newLabel("while_end")

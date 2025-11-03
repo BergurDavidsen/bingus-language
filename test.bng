@@ -6,7 +6,7 @@ while(x<100){
         print 1000;
         break;
     } else{
-        continue;
+        print 69;
     }
 }
 return x;

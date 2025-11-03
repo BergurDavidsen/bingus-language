@@ -23,6 +23,7 @@ const (
 	TOKEN_MINUS
 	TOKEN_MULTIPLY
 	TOKEN_DIVIDE
+	TOKEN_MODUlO
 	TOKEN_TRUE
 	TOKEN_FALSE
 	TOKEN_LT
@@ -58,6 +59,7 @@ var singleCharTokens = map[byte]int{
 	'*': TOKEN_MULTIPLY,
 	'/': TOKEN_DIVIDE,
 	'=': TOKEN_EQUAL,
+	'%': TOKEN_MODUlO,
 	';': TOKEN_SEMICOLON,
 	'(': TOKEN_LPAREN,
 	')': TOKEN_RPAREN,
