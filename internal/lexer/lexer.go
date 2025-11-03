@@ -18,6 +18,33 @@ func Lex(input string) []Token {
 			i++
 			continue
 		}
+
+		if c == '/' && i+1 < len(input) {
+			next := input[i+1]
+
+			// Single-line comment //
+			if next == '/' {
+				i += 2
+				for i < len(input) && input[i] != '\n' {
+					i++
+				}
+				continue
+			}
+
+			// Multi-line comment /* ... */
+			if next == '*' {
+				i += 2
+				for i+1 < len(input) && !(input[i] == '*' && input[i+1] == '/') {
+					i++
+				}
+				if i+1 >= len(input) {
+					panic("Unterminated multi-line comment")
+				}
+				i += 2
+				continue
+			}
+		}
+
 		if i+1 < len(input) {
 			twoChar := input[i : i+2]
 			if tokType, ok := multiCharTokens[twoChar]; ok {
