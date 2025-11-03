@@ -1,6 +1,11 @@
+/* 
+    Square printer
+
+    This program prints all the squares from 1 to 100
+*/
 let i = 1;
 while(i<=100){
-    print i;
-    i = i+1;
+    print i*i; // print the square
+    i = i+1; // next number
 }
 return 0;
